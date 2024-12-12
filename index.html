@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Minesweeper</title>
+          <link rel="icon" href="https://i.pinimg.com/originals/a9/0d/3a/a90d3ae6cb9e88c2cd4800c995dcb759.jpg" type="image/png">
+          <script src="https://cdn.tailwindcss.com"></script>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Dela+Gothic+One&family=Righteous&display=swap"
+                    rel="stylesheet">
+          <style>
+                    *::selection {
+                              background-color: gold;
+                              color: black;
+                    }
+
+                    .righteous-regular {
+                              font-family: "Righteous", sans-serif;
+                              font-weight: 400;
+                              font-style: normal;
+                    }
+          </style>
+</head>
+
+<body class="h-screen bg-gray-200 flex justify-center items-center flex-col righteous-regular">
+
+          <h1 class="mb-8 font-bold text-6xl">Minesweeper</h1>
+
+          <div class="h-full w-full flex justify-center items-center fixed bg-yellow-200 bg-opacity-70 flex-col hidden"
+                    id="js-win-screen">
+                    <span class="text-[500px] cursor-default">🏆</span>
+                    <h1 onclick="location.reload();" class="text-[60px] mt-[-110px] text-gray-900 cursor-pointer">Play again?</h1>
+          </div>
+
+          <div class="h-full w-full flex justify-center items-center fixed bg-red-500 bg-opacity-70 flex-col hidden"
+                    id="js-lose-screen">
+                    <span class="text-[500px] cursor-default">☠️</span>
+                    <h1 onclick="location.reload();" class="text-[60px] mt-[-110px] text-gray-400 cursor-pointer">Play again?</h1>
+          </div>
+
+          <div class="grid bg-black grid-rows-8 grid-cols-10 border-[8px] rounded-xl border-black" id="js-field"></div>
+
+          <script>
+                    function find(target) {
+                              return document.querySelector(target);
+                    }
+                    function print(content) {
+                              console.log(content);
+                    }
+                    function revealTile(event) {
+                              const tile = event.target.parentElement;
+                              const tileContent = tile.querySelector(".js-content");
+                              const x = parseInt(tile.dataset.x); // Get x and y values
+                              const y = parseInt(tile.dataset.y);
+
+                              if (event.target.classList.contains("flagged")) {
+                                        return;
+                              }
+
+                              tileContent.classList.remove("hidden");
+
+                              event.target.remove();
+                              revealedTiles++;
+
+                              if (tileContent.dataset.content === 'bomb') {
+                                        lose();
+                                        return;
+                              }
+
+                              revealSurroundingTiles(x, y);
+                              checkWin();
+                    }
+                    function randomNumber(min, max) {
+                              return Math.floor(Math.random() * (max - min + 1)) + min;
+                    }
+                    function revealSurroundingTiles(x, y) {
+                              const tile = find(`#js-${x}${y}`);
+
+                              if (tile.querySelector(".js-content").dataset.content === "number" && revealedTiles > 1) {
+                                        return;
+                              }
+                              // Get all the possible neighbors (up, down, left, right, and diagonals)
+                              const neighbors = [
+                                        [-1, 0], [1, 0], [0, -1], [0, 1], // Horizontal and vertical neighbors
+                                        [-1, -1], [1, 1], [-1, 1], [1, -1] // Diagonal neighbors
+                              ];
+
+
+                              // Loop through each neighbor to check and reveal if necessary
+                              neighbors.forEach(([dx, dy]) => {
+                                        const nx = x + dx;
+                                        const ny = y + dy;
+
+                                        // Ensure the neighbor is within bounds (1 <= x <= 10, 1 <= y <= 8)
+                                        if (nx >= 1 && nx <= 10 && ny >= 1 && ny <= 8) {
+                                                  const neighborTile = document.querySelector(`#js-${nx}${ny}`);
+                                                  const neighborTileContent = neighborTile.querySelector('.js-content');
+                                                  const neighborTileCover = neighborTile.querySelector('.js-cover');
+
+                                                  if (neighborTileContent.dataset.content !== 'bomb' && neighborTileCover) {
+                                                            neighborTileContent.classList.remove("hidden");
+                                                            neighborTileCover.remove();
+                                                            revealedTiles++;
+                                                            revealSurroundingTiles(nx, ny); // Recursively reveal neighbors
+                                                  }
+                                        }
+                              });
+                    }
+
+                    const field = find("#js-field");
+                    let tilesHTML = "";
+
+                    for (let i = 1; i <= 8; i++) {
+                              for (let j = 1; j <= 10; j++) {
+                                        tilesHTML += `
+                                        <div class="rounded-lg h-20 w-20 bg-white border-[4px] border-black js-tile" data-x="${j}" data-y="${i}" id="js-${j}${i}">
+                                                  <div class="h-full w-full bg-gray-800 cursor-pointer flex justify-center items-center js-cover" onclick="revealTile(event);"></div>
+                                                  <div class="h-full w-full flex justify-center items-center p-2 js-content hidden" data-content="empty">
+                                                  </div>
+                                        </div>
+                                        `;
+                              }
+                    }
+
+                    field.innerHTML = tilesHTML;
+
+                    for (let i = 1; i <= 10; i++) {
+                              let x = randomNumber(1, 10);
+                              let y = randomNumber(1, 8);
+
+                              let tile = find(`#js-${x}${y}`);
+                              let tileContent = tile.querySelector(".js-content");
+
+                              if (tileContent.dataset.content === "empty") {
+                                        tileContent.dataset.content = "bomb";
+                                        tileContent.innerHTML = `
+                                        <img src="https://i.pinimg.com/originals/a9/0d/3a/a90d3ae6cb9e88c2cd4800c995dcb759.jpg" alt="Cartoon Black Bomb" class="h-full w-full"/>
+                                        `;
+                              }
+                    }
+
+                    const tiles = document.querySelectorAll(".js-tile");
+                    let revealedTiles = 0;
+                    let bombs = 0;
+
+                    tiles.forEach(element => {
+                              if (element.querySelector(".js-content").dataset.content === "bomb") {
+                                        bombs++;
+                              }
+                              print(bombs);
+                    })
+
+                    tiles.forEach(element => {
+                              let x = parseInt(element.dataset.x);
+                              let y = parseInt(element.dataset.y);
+                              let tileContent = element.children[1];
+                              let bomb = 0;
+                              const colors = {
+                                        1: "text-blue-500",    // Tailwind blue color
+                                        2: "text-green-500",   // Tailwind green color
+                                        3: "text-red-500",     // Tailwind red color
+                                        4: "text-purple-500",  // Tailwind purple color
+                                        5: "text-yellow-500",  // Tailwind yellow color (closest to brown)
+                                        6: "text-cyan-500",    // Tailwind cyan color
+                                        7: "text-gray-900",    // Tailwind black-ish color
+                                        8: "text-gray-500"     // Tailwind gray color
+                              };
+
+
+
+                              if (tileContent.dataset.content === "empty") {
+                                        for (let i = -1; i <= 1; i++) {
+                                                  for (let j = -1; j <= 1; j++) {
+                                                            // Skip the tile itself
+                                                            if (i === 0 && j === 0) continue;
+
+                                                            let newX = x + i;  // New x-coordinate
+                                                            let newY = y + j;  // New y-coordinate
+
+                                                            if (newX >= 1 && newX <= 10 && newY >= 1 && newY <= 8) {
+                                                                      // Find the neighboring tile using the new coordinates
+                                                                      let neighborTile = document.querySelector(`#js-${newX}${newY}`);
+                                                                      let neighborTileContent = neighborTile?.querySelector(".js-content");  // Get the content of the neighboring tile
+
+                                                                      // Check if the neighbor is a bomb
+                                                                      if (neighborTileContent && neighborTileContent.dataset.content === "bomb") {
+                                                                                bomb++;
+                                                                      }
+                                                            }
+                                                  }
+                                        }
+
+                                        if (bomb) {
+                                                  tileContent.dataset.content = "number";
+                                                  tileContent.innerHTML = `
+                                                  <h1 class="font-bold text-5xl ${colors[bomb]} cursor-default">${bomb}</h1>
+                                                  `;
+                                        }
+                              }
+
+                    });
+
+                    document.addEventListener("contextmenu", function (event) {
+                              event.preventDefault(); // Prevent the browser's default context menu
+                    });
+                    function handleRightClick(event) {
+                              event.preventDefault(); // Prevent the default context menu
+
+                              const tileCover = event.currentTarget; // Ensure the `.js-cover` element is targeted
+
+                              if (tileCover.classList.contains("flagged")) {
+                                        // If the tile is already flagged, unflag it
+                                        tileCover.classList.remove("flagged");
+                                        tileCover.innerHTML = ""; // Clear any flag content
+                                        tileCover.classList.add("cursor-pointer");
+                              } else {
+                                        // Otherwise, flag the tile
+                                        tileCover.classList.add("flagged");
+                                        tileCover.innerHTML = `<span class="text-red-500 font-bold text-4xl cursor-default">🚩</span>`;
+                                        tileCover.classList.remove("cursor-pointer");
+                              }
+                    }
+                    document.querySelectorAll(".js-cover").forEach(tileCover => {
+                              tileCover.addEventListener("contextmenu", handleRightClick);
+                    });
+
+                    function checkWin() {
+                              if (revealedTiles === (80 - bombs)) {
+                                        find("#js-win-screen").classList.remove("hidden");
+                              }
+                    }
+                    function lose() {
+                              find('#js-lose-screen').classList.remove("hidden");
+                    }
+
+          </script>
+</body>
+
+</html>
